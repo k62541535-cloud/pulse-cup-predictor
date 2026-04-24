@@ -9,7 +9,6 @@ const state = {
   predictions: readLocalPredictions(),
   matches: [],
   leaderboard: [],
-  lastSubmittedName: "",
   submitting: false,
   authConfig: null
 };
@@ -51,6 +50,11 @@ function readLocalPredictions() {
 function saveLocalDraft() {
   localStorage.setItem(storageKeys.name, state.playerName);
   localStorage.setItem(storageKeys.predictions, JSON.stringify(state.predictions));
+}
+
+function hasLockedSubmission() {
+  const trimmedName = state.playerName.trim().toLowerCase();
+  return Boolean(trimmedName) && state.leaderboard.some((row) => row.name.toLowerCase() === trimmedName);
 }
 
 function setAuthMessage(message, tone = "") {
@@ -230,40 +234,6 @@ async function copyShareLink() {
   }
 }
 
-function buildProjectedLeaderboard() {
-  const rows = state.leaderboard.map((row) => ({ ...row, currentUser: false }));
-  const draftName = state.playerName.trim() || "You";
-  const draftSummary = summarizePredictions(state.predictions);
-  const existingIndex = rows.findIndex((row) => row.name.toLowerCase() === draftName.toLowerCase());
-  const projectedEntry = {
-    name: draftName,
-    points: draftSummary.points,
-    exact: draftSummary.exact,
-    updatedAt: new Date().toISOString(),
-    currentUser: true
-  };
-
-  if (existingIndex >= 0) {
-    rows.splice(existingIndex, 1, projectedEntry);
-  } else {
-    rows.push(projectedEntry);
-  }
-
-  rows.sort((left, right) => {
-    if (right.points !== left.points) {
-      return right.points - left.points;
-    }
-
-    if (right.exact !== left.exact) {
-      return right.exact - left.exact;
-    }
-
-    return left.name.localeCompare(right.name);
-  });
-
-  return rows.map((row, index) => ({ ...row, rank: index + 1 }));
-}
-
 function renderStageOptions() {
   const stages = ["all", ...new Set(state.matches.map((match) => match.stage))];
   elements.stageFilter.innerHTML = stages
@@ -304,6 +274,7 @@ function renderMatches() {
       const rawPrediction = getDraftPrediction(state.predictions[match.id]);
       const prediction = parsePrediction(rawPrediction);
       const result = scorePrediction(prediction, match);
+      const locked = hasLockedSubmission();
 
     title.textContent = match.title;
     stage.textContent = match.stage;
@@ -321,8 +292,14 @@ function renderMatches() {
 
       homeScore.value = rawPrediction.home;
       awayScore.value = rawPrediction.away;
+      homeScore.disabled = locked;
+      awayScore.disabled = locked;
 
       const updatePrediction = () => {
+        if (locked) {
+          return;
+        }
+
         const nextHome = homeScore.value.trim();
         const nextAway = awayScore.value.trim();
 
@@ -384,9 +361,15 @@ function renderSummary() {
   elements.scoreTotal.textContent = String(summary.points);
   elements.exactCount.textContent = String(summary.exact);
 
-  const rows = buildProjectedLeaderboard();
-  const current = rows.find((row) => row.currentUser);
+  const currentName = state.playerName.trim().toLowerCase();
+  const rows = state.leaderboard.map((row, index) => ({ ...row, rank: index + 1 }));
+  const current = rows.find((row) => row.name.toLowerCase() === currentName);
   elements.rankDisplay.textContent = current ? `#${current.rank}` : "-";
+
+  const locked = hasLockedSubmission();
+  elements.submitButton.disabled = locked || state.submitting;
+  elements.resetButton.disabled = true;
+  elements.resetButton.textContent = locked ? "Entry Locked" : "Reset Disabled";
 }
 
 function renderLeaderboard() {
@@ -396,7 +379,12 @@ function renderLeaderboard() {
     elements.leaderboardNote.textContent = `${state.leaderboard.length} player${state.leaderboard.length === 1 ? "" : "s"} joined this shared leaderboard.`;
   }
 
-  const rows = buildProjectedLeaderboard();
+  const currentName = state.playerName.trim().toLowerCase();
+  const rows = state.leaderboard.map((row, index) => ({
+    ...row,
+    rank: index + 1,
+    currentUser: row.name.toLowerCase() === currentName
+  }));
   elements.leaderboardBody.innerHTML = rows
     .map((row) => {
       return `
@@ -527,6 +515,11 @@ async function submitPredictions() {
     return;
   }
 
+  if (hasLockedSubmission()) {
+    setStatus("Your World Cup entry is locked and already on the leaderboard.", "error");
+    return;
+  }
+
   state.submitting = true;
   elements.submitButton.disabled = true;
   setStatus("Submitting to shared leaderboard...");
@@ -544,9 +537,8 @@ async function submitPredictions() {
     });
 
     state.leaderboard = payload.leaderboard;
-    state.lastSubmittedName = trimmedName;
     saveLocalDraft();
-    setStatus("Shared leaderboard updated.", "success");
+    setStatus("Entry submitted and locked into the leaderboard.", "success");
     renderAll();
   } catch (error) {
     setStatus(describeNetworkError(error, "Submission failed."), "error");
@@ -580,33 +572,7 @@ async function refreshMatches() {
 }
 
 async function resetEntry() {
-  const trimmedName = state.playerName.trim();
-  state.predictions = {};
-  saveLocalDraft();
-
-  if (!trimmedName) {
-    setStatus("Local draft cleared.");
-    renderAll();
-    return;
-  }
-
-  setStatus("Clearing local draft and shared entry...");
-
-  try {
-    const payload = await fetchJson("/api/reset", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ name: trimmedName })
-    });
-
-    state.leaderboard = payload.leaderboard;
-    setStatus("Local draft and shared entry cleared.", "success");
-  } catch (error) {
-    setStatus(describeNetworkError(error, "Reset failed."), "error");
-  }
-
+  setStatus("Submitted entries are locked and cannot be reset.", "error");
   renderAll();
 }
 

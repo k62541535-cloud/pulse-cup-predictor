@@ -248,6 +248,17 @@ function Get-ScoredEntries {
   $scored | Sort-Object -Property @{ Expression = "points"; Descending = $true }, @{ Expression = "exact"; Descending = $true }, @{ Expression = "name"; Descending = $false }
 }
 
+function Test-HasExistingSubmission {
+  param([string]$Name)
+
+  $store = Read-JsonFile -Path $predictionsPath
+  if ($null -eq $store -or $null -eq $store.entries) {
+    return $false
+  }
+
+  @($store.entries | Where-Object { ([string]$_.name).ToLowerInvariant() -eq $Name.ToLowerInvariant() }).Count -gt 0
+}
+
 function Get-FlagMap {
   @{
     "Algeria" = "🇩🇿"; "Argentina" = "🇦🇷"; "Australia" = "🇦🇺"; "Austria" = "🇦🇹"; "Belgium" = "🇧🇪";
@@ -803,12 +814,17 @@ function Handle-Api {
       return
     }
 
+    if (Test-HasExistingSubmission -Name $name) {
+      Send-Json -Client $Client -Body @{ error = "This account already submitted picks and is now locked." } -StatusCode 403
+      return
+    }
+
     $store = Read-JsonFile -Path $predictionsPath
     if ($null -eq $store) {
       $store = [pscustomobject]@{ entries = @() }
     }
 
-    $entries = @($store.entries | Where-Object { $_.name -ne $name })
+    $entries = @($store.entries)
     $entries += [pscustomobject]@{
       name = $name
       updatedAt = [DateTime]::UtcNow.ToString("o")
@@ -825,26 +841,7 @@ function Handle-Api {
   }
 
   if ($path -eq "/api/reset" -and $Request.Method -eq "POST") {
-    $payload = Read-RequestJson -Request $Request
-    $name = [string]$payload.name
-
-    if ($name -ne $authenticatedUser.username) {
-      Send-Json -Client $Client -Body @{ error = "You can only clear your own signed-in account." } -StatusCode 403
-      return
-    }
-
-    $store = Read-JsonFile -Path $predictionsPath
-    if ($null -eq $store) {
-      $store = [pscustomobject]@{ entries = @() }
-    }
-
-    $store.entries = @($store.entries | Where-Object { $_.name -ne $name })
-    Write-JsonFile -Path $predictionsPath -Data $store
-
-    Send-Json -Client $Client -Body @{
-      ok = $true
-      leaderboard = @(Get-ScoredEntries)
-    }
+    Send-Json -Client $Client -Body @{ error = "Submitted entries are locked and cannot be reset." } -StatusCode 403
     return
   }
 

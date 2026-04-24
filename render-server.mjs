@@ -165,6 +165,12 @@ async function getScoredEntries() {
     });
 }
 
+async function hasExistingSubmission(name) {
+  const store = (await readJsonFile(predictionsPath, { entries: [] })) || { entries: [] };
+  const entries = Array.isArray(store.entries) ? store.entries : [];
+  return entries.some((entry) => String(entry.name || "").toLowerCase() === String(name || "").toLowerCase());
+}
+
 const flagMap = {
   Algeria: "🇩🇿",
   Argentina: "🇦🇷",
@@ -526,17 +532,20 @@ app.post("/api/predictions", ensureAuthenticated, async (req, res) => {
     return;
   }
 
+  if (await hasExistingSubmission(name)) {
+    res.status(403).json({ error: "This account already submitted picks and is now locked." });
+    return;
+  }
+
   const store = (await readJsonFile(predictionsPath, { entries: [] })) || { entries: [] };
   const entries = Array.isArray(store.entries) ? store.entries : [];
-  const nextEntries = entries.filter((entry) => entry.name !== name);
-
-  nextEntries.push({
+  entries.push({
     name,
     updatedAt: new Date().toISOString(),
     predictions: req.body?.predictions || {}
   });
 
-  store.entries = nextEntries;
+  store.entries = entries;
   await writeJsonFile(predictionsPath, store);
 
   res.json({
@@ -546,22 +555,7 @@ app.post("/api/predictions", ensureAuthenticated, async (req, res) => {
 });
 
 app.post("/api/reset", ensureAuthenticated, async (req, res) => {
-  const name = String(req.body?.name || "");
-
-  if (name !== req.session.user.username) {
-    res.status(403).json({ error: "You can only clear your own signed-in account." });
-    return;
-  }
-
-  const store = (await readJsonFile(predictionsPath, { entries: [] })) || { entries: [] };
-  const entries = Array.isArray(store.entries) ? store.entries : [];
-  store.entries = entries.filter((entry) => entry.name !== name);
-  await writeJsonFile(predictionsPath, store);
-
-  res.json({
-    ok: true,
-    leaderboard: await getScoredEntries()
-  });
+  res.status(403).json({ error: "Submitted entries are locked and cannot be reset." });
 });
 
 app.use(express.static(root));
