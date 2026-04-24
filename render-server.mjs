@@ -16,12 +16,12 @@ const root = __dirname;
 const dataDir = path.join(root, "data");
 const matchesPath = path.join(dataDir, "matches.json");
 const predictionsPath = path.join(dataDir, "predictions.json");
-const uefaFixturesUrl =
-  "https://www.uefa.com/uefachampionsleague/news/029c-1e9a2f63fe2d-ebf9ad643892-1000/";
+const fifaScheduleUrl =
+  "https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/articles/match-schedule-fixtures-results-teams-stadiums";
 
 const refreshState = {
-  sourceUrl: uefaFixturesUrl,
-  sourceLabel: "UEFA",
+  sourceUrl: fifaScheduleUrl,
+  sourceLabel: "FIFA",
   lastSyncedAt: null,
   lastRefreshSucceeded: false
 };
@@ -33,7 +33,7 @@ app.set("trust proxy", 1);
 app.use(express.json({ limit: "1mb" }));
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "champions-league-foari-dev-secret",
+    secret: process.env.SESSION_SECRET || "pulse-cup-dev-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -568,7 +568,7 @@ await tryRefreshMatches();
 
 app.listen(port, () => {
   const shareUrls = publicBaseUrl ? [publicBaseUrl] : [`http://localhost:${port}`];
-  console.log("Champions League Foari Render server running at:");
+  console.log("Pulse Cup Predictor Render server running at:");
   for (const url of shareUrls) {
     console.log(` - ${url}`);
   }

@@ -11,8 +11,8 @@ $predictionsPath = Join-Path $dataDir "predictions.json"
 $usersPath = Join-Path $dataDir "users.json"
 $sessions = @{}
 $refreshState = @{
-  sourceUrl = "https://www.uefa.com/uefachampionsleague/news/029c-1e9a2f63fe2d-ebf9ad643892-1000/"
-  sourceLabel = "UEFA"
+  sourceUrl = "https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/articles/match-schedule-fixtures-results-teams-stadiums"
+  sourceLabel = "FIFA"
   lastSyncedAt = $null
   lastRefreshSucceeded = $false
 }
@@ -897,7 +897,7 @@ $serverState.shareUrls = @($serverState.shareUrls | Sort-Object -Unique)
 $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Any, $Port)
 $listener.Start()
 
-Write-Host "Champions League Foari server running at:"
+Write-Host "Pulse Cup Predictor server running at:"
 foreach ($url in $serverState.shareUrls) {
   Write-Host " - $url"
 }
