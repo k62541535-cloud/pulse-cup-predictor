@@ -33,7 +33,7 @@ app.set("trust proxy", 1);
 app.use(express.json({ limit: "1mb" }));
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "pulse-cup-dev-secret",
+    secret: process.env.SESSION_SECRET || "champions-league-foari-dev-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {

@@ -8,7 +8,7 @@ set "PORT=8080"
 
 cd /d "%APP_DIR%"
 
-start "Pulse Cup Predictor Server" "%POWERSHELL_EXE%" -NoExit -ExecutionPolicy Bypass -File "%APP_DIR%server.ps1" -Port %PORT%
+start "Champions League Foari Server" "%POWERSHELL_EXE%" -NoExit -ExecutionPolicy Bypass -File "%APP_DIR%server.ps1" -Port %PORT%
 timeout /t 2 /nobreak >nul
 
 echo.
@@ -17,7 +17,7 @@ echo Keep the tunnel window open to keep the public link alive.
 echo Google sign-in needs a stable authorized origin, so this changing tunnel URL may not work reliably for Google auth.
 echo.
 
-start "Pulse Cup Predictor Public Tunnel" "%POWERSHELL_EXE%" -NoExit -Command ^
+start "Champions League Foari Public Tunnel" "%POWERSHELL_EXE%" -NoExit -Command ^
   "& '%SSH_EXE%' -o ServerAliveInterval=60 -o StrictHostKeyChecking=accept-new -R 80:localhost:%PORT% nokey@localhost.run"
 
 timeout /t 3 /nobreak >nul
