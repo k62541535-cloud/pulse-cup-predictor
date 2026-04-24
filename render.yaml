@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: pulse-cup-predictor
+    name: champions-league-foari
     runtime: node
     plan: free
     buildCommand: npm install

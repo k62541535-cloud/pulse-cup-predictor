@@ -7,7 +7,7 @@ set "PORT=8080"
 
 cd /d "%APP_DIR%"
 
-start "Pulse Cup Predictor Server" "%POWERSHELL_EXE%" -NoExit -ExecutionPolicy Bypass -File "%APP_DIR%server.ps1" -Port %PORT%
+start "Champions League Foari Server" "%POWERSHELL_EXE%" -NoExit -ExecutionPolicy Bypass -File "%APP_DIR%server.ps1" -Port %PORT%
 timeout /t 2 /nobreak >nul
 start "" "http://localhost:%PORT%/"
 

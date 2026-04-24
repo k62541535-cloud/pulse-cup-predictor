@@ -16,12 +16,12 @@ const root = __dirname;
 const dataDir = path.join(root, "data");
 const matchesPath = path.join(dataDir, "matches.json");
 const predictionsPath = path.join(dataDir, "predictions.json");
-const fifaScheduleUrl =
-  "https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/articles/match-schedule-fixtures-results-teams-stadiums";
+const uefaFixturesUrl =
+  "https://www.uefa.com/uefachampionsleague/news/029c-1e9a2f63fe2d-ebf9ad643892-1000/";
 
 const refreshState = {
-  sourceUrl: fifaScheduleUrl,
-  sourceLabel: "FIFA",
+  sourceUrl: uefaFixturesUrl,
+  sourceLabel: "UEFA",
   lastSyncedAt: null,
   lastRefreshSucceeded: false
 };
@@ -33,7 +33,7 @@ app.set("trust proxy", 1);
 app.use(express.json({ limit: "1mb" }));
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "pulse-cup-dev-secret",
+    secret: process.env.SESSION_SECRET || "champions-league-foari-dev-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -389,19 +389,12 @@ async function getFifaScheduleMatches() {
 
 async function tryRefreshMatches() {
   try {
-    const matches = await getFifaScheduleMatches();
-    await writeJsonFile(matchesPath, matches);
-    refreshState.lastSyncedAt = new Date().toISOString();
+    const stats = await fs.stat(matchesPath);
+    refreshState.lastSyncedAt = stats.mtime.toISOString();
     refreshState.lastRefreshSucceeded = true;
     return true;
   } catch {
-    try {
-      const stats = await fs.stat(matchesPath);
-      refreshState.lastSyncedAt = stats.mtime.toISOString();
-    } catch {
-      refreshState.lastSyncedAt = null;
-    }
-
+    refreshState.lastSyncedAt = null;
     refreshState.lastRefreshSucceeded = false;
     return false;
   }
@@ -581,7 +574,7 @@ await tryRefreshMatches();
 
 app.listen(port, () => {
   const shareUrls = publicBaseUrl ? [publicBaseUrl] : [`http://localhost:${port}`];
-  console.log("Pulse Cup Predictor Render server running at:");
+  console.log("Champions League Foari Render server running at:");
   for (const url of shareUrls) {
     console.log(` - ${url}`);
   }

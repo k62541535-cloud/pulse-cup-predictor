@@ -11,8 +11,8 @@ $predictionsPath = Join-Path $dataDir "predictions.json"
 $usersPath = Join-Path $dataDir "users.json"
 $sessions = @{}
 $refreshState = @{
-  sourceUrl = "https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/articles/match-schedule-fixtures-results-teams-stadiums"
-  sourceLabel = "FIFA"
+  sourceUrl = "https://www.uefa.com/uefachampionsleague/news/029c-1e9a2f63fe2d-ebf9ad643892-1000/"
+  sourceLabel = "UEFA"
   lastSyncedAt = $null
   lastRefreshSucceeded = $false
 }
@@ -408,15 +408,11 @@ function Get-FifaScheduleMatches {
 
 function Try-RefreshMatches {
   try {
-    $matches = @(Get-FifaScheduleMatches)
-    Write-JsonFile -Path $matchesPath -Data $matches
-    $refreshState.lastSyncedAt = [DateTime]::UtcNow.ToString("o")
+    $refreshState.lastSyncedAt = (Get-Item -LiteralPath $matchesPath).LastWriteTimeUtc.ToString("o")
     $refreshState.lastRefreshSucceeded = $true
     $true
   } catch {
-    if (Test-Path -LiteralPath $matchesPath) {
-      $refreshState.lastSyncedAt = (Get-Item -LiteralPath $matchesPath).LastWriteTimeUtc.ToString("o")
-    }
+    $refreshState.lastSyncedAt = $null
     $refreshState.lastRefreshSucceeded = $false
     $false
   }
@@ -904,7 +900,7 @@ $serverState.shareUrls = @($serverState.shareUrls | Sort-Object -Unique)
 $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Any, $Port)
 $listener.Start()
 
-Write-Host "Pulse Cup Predictor server running at:"
+Write-Host "Champions League Foari server running at:"
 foreach ($url in $serverState.shareUrls) {
   Write-Host " - $url"
 }
