@@ -3,7 +3,7 @@
   <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>world cup foari</title>
+  <title>World Cup Foari</title>
   <link rel="stylesheet" href="styles.css">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -11,7 +11,7 @@
   <div class="auth-shell" id="auth-shell">
     <section class="auth-card">
       <h1 class="auth-title">Enter the prediction room.</h1>
-      <p class="auth-text">Continue with your Google account to view and submit World Cup predictions.</p>
+      <p class="auth-text">Continue with your Google account to view and submit FIFA World Cup predictions.</p>
       <div id="google-signin" class="google-signin-slot"></div>
       <p id="auth-message" class="auth-message">Loading Google sign-in...</p>
     </section>
@@ -19,34 +19,49 @@
 
   <div class="page-shell">
     <header class="hero">
+      <div class="hero-orbit hero-orbit-left"></div>
+      <div class="hero-orbit hero-orbit-right"></div>
       <div class="hero-copy">
         <p class="eyebrow">FIFA World Cup 2026</p>
-        <h1>Upcoming fixtures. Real schedule. Shared predictions.</h1>
+        <h1>Group stage energy. Stadium lights. Shared picks.</h1>
         <p class="hero-text">
-          Predict upcoming 2026 World Cup scorelines from FIFA's published schedule, submit your slate to a shared leaderboard,
-          and lock in your picks before kickoff on Thursday, June 11, 2026.
+          Predict the 2026 World Cup from the opening host-city fixtures onward, submit your scorelines to a shared leaderboard,
+          and follow the tournament rhythm across North America's biggest stages.
         </p>
         <div class="hero-actions">
           <a class="button button-primary" href="#predictor">Build My Picks</a>
           <a class="button button-ghost" href="#leaderboard">Shared Table</a>
+          <a class="button button-ghost" href="https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/articles/match-schedule-fixtures-results-teams-stadiums" target="_blank" rel="noreferrer">Official FIFA Schedule</a>
+        </div>
+
+        <div class="invite-card">
+          <div>
+            <p class="invite-label">Join This Leaderboard</p>
+            <strong>Anyone with this link can sign in and submit picks.</strong>
+            <p class="invite-text">Share the app URL, have them sign in with Google, and their entry will appear in the same live table.</p>
+          </div>
+          <div class="invite-actions">
+            <code id="hero-share-url" class="share-url">Waiting for public link...</code>
+            <button id="copy-share-button" class="button button-primary" type="button">Copy Invite Link</button>
+          </div>
         </div>
       </div>
 
       <aside class="hero-panel">
         <div class="hero-stat">
           <span class="stat-label">Tournament Data</span>
-          <strong>16 upcoming matches</strong>
-          <span>Opening slate from the 2026 group stage</span>
+          <strong>2026 opening slate</strong>
+          <span>Shared picks across the first World Cup fixtures</span>
         </div>
         <div class="hero-stat">
           <span class="stat-label">Scoring</span>
           <strong>5 exact / 3 result</strong>
-          <span>Points activate once matches are played</span>
+          <span>Points activate once official World Cup results land</span>
         </div>
         <div class="hero-stat">
-          <span class="stat-label">Multiplayer</span>
-          <strong>Shared backend</strong>
-          <span>Predictions persist for every user</span>
+          <span class="stat-label">Host Nations</span>
+          <strong>Canada, Mexico, USA</strong>
+          <span>Built for a tournament that stretches across North America</span>
         </div>
       </aside>
     </header>
@@ -74,13 +89,13 @@
         <div class="panel-heading">
           <div>
             <p class="eyebrow">Prediction Desk</p>
-            <h2>Make your 2026 picks</h2>
+            <h2>Make your World Cup picks</h2>
           </div>
 
           <div class="controls">
             <label class="input-group">
               <span>Signed-in user</span>
-              <input id="player-name" type="text" maxlength="24" placeholder="Sign in to continue" readonly>
+              <input id="player-name" type="text" maxlength="24" placeholder="Sign in to continue">
             </label>
             <label class="input-group input-group-select">
               <span>Stage filter</span>
@@ -93,7 +108,7 @@
         <div class="status-row">
           <span id="save-status" class="status-pill">Draft saved locally</span>
           <div class="status-actions">
-            <span class="status-meta" id="sync-meta">Schedule cache not checked yet.</span>
+            <span class="status-meta" id="sync-meta">Official tournament cache not checked yet.</span>
             <button id="refresh-button" class="button button-ghost" type="button">Refresh Matches</button>
           </div>
         </div>
@@ -101,6 +116,7 @@
         <div class="share-row">
           <span class="share-label">Share link</span>
           <code id="share-url" class="share-url">Start the server to generate a LAN link.</code>
+          <span id="share-help" class="share-help">Share this URL so other people can join the same leaderboard.</span>
         </div>
 
         <div class="match-list" id="match-list"></div>
@@ -121,10 +137,10 @@
       <section class="panel panel-slim">
         <div class="panel-heading">
           <div>
-            <p class="eyebrow">Tournament Signal</p>
-            <h2>Round snapshot</h2>
+            <p class="eyebrow">World Cup Pulse</p>
+            <h2>Fixture snapshot</h2>
           </div>
-          <p class="panel-note">These fixtures are upcoming, so scoring stays pending until the matches are actually played.</p>
+          <p class="panel-note">These fixtures stay pending until the official World Cup scores are added.</p>
         </div>
         <div class="pulse-grid" id="pulse-grid"></div>
       </section>
@@ -136,6 +152,9 @@
             <h2>Shared prediction table</h2>
           </div>
           <p class="panel-note" id="leaderboard-note">No shared entries yet.</p>
+        </div>
+        <div class="join-note">
+          Every player who opens this link, signs in, and submits picks joins this same shared table.
         </div>
         <div class="leaderboard-table">
           <div class="leaderboard-head">

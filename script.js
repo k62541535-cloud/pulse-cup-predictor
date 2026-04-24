@@ -31,6 +31,9 @@ const elements = {
   saveStatus: document.getElementById("save-status"),
   syncMeta: document.getElementById("sync-meta"),
   shareUrl: document.getElementById("share-url"),
+  heroShareUrl: document.getElementById("hero-share-url"),
+  copyShareButton: document.getElementById("copy-share-button"),
+  shareHelp: document.getElementById("share-help"),
   submitButton: document.getElementById("submit-button"),
   refreshButton: document.getElementById("refresh-button"),
   logoutButton: document.getElementById("logout-button"),
@@ -89,19 +92,46 @@ function getOutcome(home, away) {
   return home > away ? "home" : "away";
 }
 
-function parsePrediction(raw) {
-  if (!Array.isArray(raw) || raw.length !== 2) {
-    return null;
+function getDraftPrediction(raw) {
+  if (Array.isArray(raw) && raw.length === 2) {
+    return {
+      home: raw[0] === null || raw[0] === undefined ? "" : String(raw[0]),
+      away: raw[1] === null || raw[1] === undefined ? "" : String(raw[1])
+    };
   }
 
-  const home = Number.parseInt(raw[0], 10);
-  const away = Number.parseInt(raw[1], 10);
+  if (raw && typeof raw === "object") {
+    return {
+      home: raw.home === null || raw.home === undefined ? "" : String(raw.home),
+      away: raw.away === null || raw.away === undefined ? "" : String(raw.away)
+    };
+  }
+
+  return { home: "", away: "" };
+}
+
+function parsePrediction(raw) {
+  const draft = getDraftPrediction(raw);
+  const home = Number.parseInt(draft.home, 10);
+  const away = Number.parseInt(draft.away, 10);
 
   if (!Number.isInteger(home) || !Number.isInteger(away)) {
     return null;
   }
 
   return { home, away };
+}
+
+function buildSubmissionPredictions() {
+  return Object.entries(state.predictions).reduce((entries, [matchId, rawPrediction]) => {
+    const prediction = parsePrediction(rawPrediction);
+
+    if (prediction) {
+      entries[matchId] = [prediction.home, prediction.away];
+    }
+
+    return entries;
+  }, {});
 }
 
 function scorePrediction(prediction, match) {
@@ -168,13 +198,36 @@ function renderRefreshMeta(refreshInfo) {
 }
 
 function renderShareUrl(serverInfo) {
+  const fallbackMessage = "No join link available yet.";
+
   if (!serverInfo || !Array.isArray(serverInfo.shareUrls) || !serverInfo.shareUrls.length) {
-    elements.shareUrl.textContent = "No LAN URL available yet.";
+    elements.shareUrl.textContent = fallbackMessage;
+    elements.heroShareUrl.textContent = fallbackMessage;
+    elements.copyShareButton.disabled = true;
     return;
   }
 
   const preferred = serverInfo.shareUrls.find((url) => !url.includes("localhost") && !url.includes("127.0.0.1")) || serverInfo.shareUrls[0];
   elements.shareUrl.textContent = preferred;
+  elements.heroShareUrl.textContent = preferred;
+  elements.copyShareButton.disabled = false;
+  elements.shareHelp.textContent = `Share this URL so other people can sign in and join the same leaderboard: ${preferred}`;
+}
+
+async function copyShareLink() {
+  const url = elements.heroShareUrl.textContent.trim();
+
+  if (!url || url === "No join link available yet." || url === "Waiting for public link...") {
+    setStatus("No share link available yet.", "error");
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(url);
+    setStatus("Invite link copied. Share it so others can join.", "success");
+  } catch {
+    setStatus("Couldn't copy automatically. Copy the share link manually.", "error");
+  }
 }
 
 function buildProjectedLeaderboard() {
@@ -245,11 +298,12 @@ function renderMatches() {
     const awayTeam = fragment.querySelector(".away-team");
     const homeScore = fragment.querySelector(".home-score");
     const awayScore = fragment.querySelector(".away-score");
-    const actualScore = fragment.querySelector(".actual-score");
-    const winnerNote = fragment.querySelector(".winner-note");
-    const points = fragment.querySelector(".match-points");
-    const prediction = parsePrediction(state.predictions[match.id]);
-    const result = scorePrediction(prediction, match);
+      const actualScore = fragment.querySelector(".actual-score");
+      const winnerNote = fragment.querySelector(".winner-note");
+      const points = fragment.querySelector(".match-points");
+      const rawPrediction = getDraftPrediction(state.predictions[match.id]);
+      const prediction = parsePrediction(rawPrediction);
+      const result = scorePrediction(prediction, match);
 
     title.textContent = match.title;
     stage.textContent = match.stage;
@@ -258,32 +312,41 @@ function renderMatches() {
     awayFlag.textContent = match.awayFlag;
     homeTeam.textContent = match.home;
     awayTeam.textContent = match.away;
-    actualScore.textContent = match.actual
-      ? `Official score: ${match.actual.home} - ${match.actual.away}`
-      : "Official score: not played yet";
-    winnerNote.textContent = match.winnerNote || "";
-    points.textContent = result.label;
-    points.classList.add(`points-${result.status}`);
+      actualScore.textContent = match.actual
+        ? `Official score: ${match.actual.home} - ${match.actual.away}`
+        : "Official score: not played yet";
+      winnerNote.textContent = match.winnerNote || "";
+      points.textContent = result.label;
+      points.classList.add(`points-${result.status}`);
 
-    if (prediction) {
-      homeScore.value = String(prediction.home);
-      awayScore.value = String(prediction.away);
-    }
+      homeScore.value = rawPrediction.home;
+      awayScore.value = rawPrediction.away;
 
-    const updatePrediction = () => {
-      const nextHome = homeScore.value === "" ? null : Number.parseInt(homeScore.value, 10);
-      const nextAway = awayScore.value === "" ? null : Number.parseInt(awayScore.value, 10);
+      const updatePrediction = () => {
+        const nextHome = homeScore.value.trim();
+        const nextAway = awayScore.value.trim();
 
-      if (Number.isInteger(nextHome) && Number.isInteger(nextAway)) {
-        state.predictions[match.id] = [nextHome, nextAway];
-      } else {
-        delete state.predictions[match.id];
-      }
+        if (!nextHome && !nextAway) {
+          delete state.predictions[match.id];
+        } else {
+          state.predictions[match.id] = {
+            home: nextHome,
+            away: nextAway
+          };
+        }
 
-      saveLocalDraft();
-      setStatus("Draft saved locally");
-      renderAll();
-    };
+        saveLocalDraft();
+        setStatus("Draft saved locally");
+
+        renderSummary();
+        renderPulse();
+        renderLeaderboard();
+
+        const updatedResult = scorePrediction(parsePrediction(state.predictions[match.id]), match);
+        points.textContent = updatedResult.label;
+        points.className = "match-points";
+        points.classList.add(`points-${updatedResult.status}`);
+      };
 
     homeScore.addEventListener("input", updatePrediction);
     awayScore.addEventListener("input", updatePrediction);
@@ -328,9 +391,9 @@ function renderSummary() {
 
 function renderLeaderboard() {
   if (!state.leaderboard.length) {
-    elements.leaderboardNote.textContent = "No shared entries yet. Submit yours to start the table.";
+    elements.leaderboardNote.textContent = "No shared entries yet. Share the link and submit the first pick.";
   } else {
-    elements.leaderboardNote.textContent = `${state.leaderboard.length} shared entr${state.leaderboard.length === 1 ? "y" : "ies"} submitted.`;
+    elements.leaderboardNote.textContent = `${state.leaderboard.length} player${state.leaderboard.length === 1 ? "" : "s"} joined this shared leaderboard.`;
   }
 
   const rows = buildProjectedLeaderboard();
@@ -476,7 +539,7 @@ async function submitPredictions() {
       },
       body: JSON.stringify({
         name: trimmedName,
-        predictions: state.predictions
+        predictions: buildSubmissionPredictions()
       })
     });
 
@@ -610,5 +673,6 @@ elements.refreshButton.addEventListener("click", refreshMatches);
 elements.submitButton.addEventListener("click", submitPredictions);
 elements.logoutButton.addEventListener("click", logout);
 elements.resetButton.addEventListener("click", resetEntry);
+elements.copyShareButton.addEventListener("click", copyShareLink);
 
 init();
